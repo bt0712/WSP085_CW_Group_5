@@ -1,7 +1,9 @@
 name: Design Parameter Change
 description: Raise a proposed change to a CSS design parameter
 title: "[PARAMETER CHANGE]: "
-labels: ["parameter-change"]
+labels:
+  - parameter-change
+ 
 body:
   - type: input
     id: parameter
@@ -26,7 +28,7 @@ body:
     attributes:
       label: Rationale for change
       description: Why is this parameter change required?
-
+ 
   - type: textarea
     id: image_upload
     attributes:
@@ -43,23 +45,22 @@ body:
         - label: Reliability Model
         - label: CAD
         - label: Bill of Materials
-
+ 
   - type: textarea
     id: expected_impact
     attributes:
       label: Expected impact
       placeholder: Performance, reliability, mass, verification evidence, compliance, cost
-
+ 
   - type: textarea
     id: chief_engineer_decision
     attributes:
       label: Chief Engineer model re-run decision
       description: To be completed during technical review.
       placeholder: Chief Engineer to confirm authorised model re-runs, rejected re-runs, and rationale.
-
- - type: textarea
- id: chief_engineer_notes
- attributes:
- label: Chief Engineer notes
- description: Record authorised re-runs, exclusions, and technical rationale.
  
+  - type: textarea
+    id: chief_engineer_notes
+    attributes:
+      label: Chief Engineer notes
+      description: Record authorised re-runs, exclusions, and technical rationale.
