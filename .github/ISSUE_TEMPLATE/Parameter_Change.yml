@@ -10,24 +10,48 @@ body:
     attributes:
       label: Parameter being changed
       placeholder: e.g. Payload mass, wing span, battery capacity
+    validations:
+      required: true
  
   - type: input
     id: current_value
     attributes:
       label: Current value
       placeholder: e.g. 5 kg
+    validations:
+      required: true
  
   - type: input
     id: proposed_value
     attributes:
       label: Proposed value
       placeholder: e.g. 8 kg
+    validations:
+      required: true
+ 
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Change priority
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+ 
+  - type: input
+    id: sysml_element
+    attributes:
+      label: Affected SysML block or element
+      placeholder: e.g. Fixed Wing UAV::Payload System
  
   - type: textarea
     id: rationale
     attributes:
       label: Rationale for change
       description: Why is this parameter change required?
+    validations:
+      required: true
  
   - type: textarea
     id: image_upload
@@ -70,3 +94,14 @@ body:
     attributes:
       label: Chief Engineer notes
       description: Record authorised re-runs, exclusions, technical rationale, and review decisions.
+ 
+  - type: dropdown
+    id: chief_engineer_status
+    attributes:
+      label: Chief Engineer decision status
+      options:
+        - Pending review
+        - Approved
+        - Approved with conditions
+        - Rejected
+        - Further evidence required
