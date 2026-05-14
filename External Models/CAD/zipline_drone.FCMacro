@@ -1,0 +1,615 @@
+# -*- coding: utf-8 -*-
+"""
+FreeCAD Macro: Zipline P1 / Sparrow Delivery Drone (v3, CSS-aligned)
+=========================================================================
+Variable names and default values aligned to the CSS configuration
+spreadsheet (CSS is the ground truth).
+
+Rename summary vs. the previous macro:
+  - VFIN_*   -> VTP_*    (Vertical Tail Plane)
+  - HSTAB_*  -> HTP_*    (Horizontal Tail Plane)
+  - WING_*   -> Wing_*   (CSS case)
+  - MOTOR_*  -> Motor_*  (with CSS typo: Motot_Diameter)
+  - PROP_*   -> Prop_*
+
+CSS rows that do NOT drive geometry (mass, cost, part numbers, RCM
+strings, battery, comms, ESC, FCC, FCS, GPS, IMU, RX, TX, XPDR,
+propulsion, structure, UAV-level performance, etc.) are declared
+below their geometry counterparts and tagged "# CSS: not used in
+geometry" so this file stays in sync with the CSS table. None means
+the CSS cell was empty.
+
+Quirks preserved from CSS (not bugs in this macro):
+  - 'Motot_Diameter'           (typo of Motor_Diameter)
+  - 'Sruct_Mass'               (typo of Struct_Mass)
+  - 'GPS_intergrated_circuit'  (typo + space -> underscore)
+  - 'IMU_intergrated_circuit'  (typo + space -> underscore)
+  - 'Wing_Camber_pct'          (lowercase 'pct')
+
+Coordinate system: +X aft (nose -> tail), +Y right wingtip, +Z up.
+Units: metres and degrees.
+Note: FreeCAD's Part API treats raw numeric values as millimetres
+by default, so the rendered geometry will appear 1000x smaller than
+the physical drone (1.3 mm long instead of 1.3 m). Useful when
+exporting to tools that expect SI units (Gazebo, ROS, Blender
+metric, etc.). If you want life-size geometry inside FreeCAD itself,
+multiply every length parameter by 1000.
+
+License: MIT.
+"""
+
+import math
+import FreeCAD as App
+import Part
+from FreeCAD import Vector, Rotation, Placement
+
+
+# =============================================================
+# CSS PARAMETERS — used by the geometry below
+# =============================================================
+# Names and values taken directly from the CSS sheet. Lengths in metres.
+
+# --- Wing ---
+Wing_Span          = 3.500
+Wing_Root_Chord    = 0.300
+Wing_Tip_Chord     = 0.230
+Wing_Thickness_Pct = 0.12
+Wing_Camber_pct    = 0.025      # CSS uses lowercase 'pct' here
+Wing_Camber_Pos    = 0.4
+Wing_Dihedral_Deg  = 2.5
+Wing_Sweep_Deg     = 0.0
+Wing_Incidence_Deg = 2.0
+Wing_X_Pos         = 0.360
+Wing_Z_Frac        = 0.55
+
+# --- Motor & Propeller (CSS group: Motor) ---
+Motor_Length       = 0.065
+Motot_Diameter     = 0.052      # CSS typo: should be 'Motor_Diameter'
+Prop_Diameter      = 0.340
+Prop_Blade_W_Root  = 0.032
+Prop_W_Tip         = 0.016
+Prop_Pitch_Deg     = 18.0
+Prop_Hub_Diam      = 0.018
+Prop_Blades        = 2.0        # CSS type is 'Real'; cast to int where used
+Prop_Thickness     = 0.003
+
+# --- VTP (Vertical Tail Plane; previously VFIN_*) ---
+VTP_Height         = 0.260
+VTP_Root_Chord     = 0.170
+VTP_Tip_Chord      = 0.110
+VTP_Thick_Pct      = 0.09
+VTP_Sweep_Deg      = 28.0
+
+# --- HTP (Horizontal Tail Plane; previously HSTAB_*) ---
+HTP_Span           = 0.620
+HTP_Root_Chord     = 0.170
+HTP_Tip_Chord      = 0.095
+HTP_Thick_Pct      = 0.09
+HTP_Dihedral_Deg   = 4.0
+
+
+# =============================================================
+# Non-CSS geometry parameters
+# =============================================================
+# These have no CSS equivalent (CSS only has Fuse_Cost/Fuse_Mass for
+# the fuselage, Pld_Mass for the payload, etc.). Names preserved
+# from the previous macro. Values in metres to match CSS.
+
+# --- Flying-boat fuselage ---
+POD_LENGTH         = 1.300
+POD_WIDTH          = 0.220
+POD_HEIGHT         = 0.240
+POD_NOSE_LENGTH    = 0.280
+POD_TAIL_LENGTH    = 0.230
+POD_SHAPE_N        = 2.4
+
+# --- Belly hatch ---
+HATCH_X_START      = 0.500
+HATCH_LENGTH       = 0.220
+HATCH_HALFWIDTH    = 0.055
+HATCH_OPEN_DEG     = 55.0
+
+# --- Payload visualisation ---
+SHOW_PAYLOAD       = True
+PAYLOAD_LENGTH     = 0.170
+PAYLOAD_WIDTH      = 0.085
+PAYLOAD_HEIGHT     = 0.078
+PAYLOAD_BAY_EXTRA  = 0.012
+
+# --- Pylon-mounted pusher mount ---
+PYLON_X            = 1.100
+PYLON_HEIGHT       = 0.210
+PYLON_DIAM         = 0.018
+PYLON_SPACING_Y    = 0.060
+
+# --- Tail boom ---
+BOOM_DIAM          = 0.032
+BOOM_X_START       = 1.270
+BOOM_X_END         = 2.000
+BOOM_Z_FRAC        = 0.55
+
+# --- Rear skid / sensor ---
+SKID_LENGTH        = 0.035
+SKID_DIAM          = 0.012
+
+
+# =============================================================
+# CSS variables NOT used in geometry generation
+# =============================================================
+# Kept here so this macro stays in sync with the CSS table. Values
+# are the CSS defaults; None means the CSS cell was empty.
+
+# --- Battery ---
+Bat_Capacity            = 20.0                              # CSS: not used in geometry
+Bat_Cost                = 50.0                              # CSS: not used in geometry (GBP)
+Bat_Mass                = 1.0                               # CSS: not used in geometry (kg)
+Bat_Type                = "Lithium Polymer"                 # CSS: not used in geometry
+Bat_Part_Number         = "MMS-BAT-12S8K-D03"               # CSS: not used in geometry
+Bat_Voltage             = 22.2                              # CSS: not used in geometry (V)
+Bat_Specific_Energy     = 180.0                             # CSS: not used in geometry (J/kg)
+
+# --- Communication System ---
+Comms_Cost              = None                              # CSS: not used in geometry
+Comms_Mass              = None                              # CSS: not used in geometry
+
+# --- DAA System ---
+DAA_Cost                = None                              # CSS: not used in geometry
+DAA_Mass                = None                              # CSS: not used in geometry
+
+# --- ESC ---
+ESC_Cost                = None                              # CSS: not used in geometry
+ESC_Mass                = None                              # CSS: not used in geometry
+ESC_Part_Number         = "MMS-ESC-080A-B02"                # CSS: not used in geometry
+ESC_RCM_Calculation     = "MIL-HDBK-217 FN2 Parts Count, Semiconductor, Transistor"  # CSS: not used in geometry
+
+# --- FCC ---
+FCC_Cost                = None                              # CSS: not used in geometry
+FCC_Mass                = None                              # CSS: not used in geometry
+FCC_Part_Number         = "MMS-FCU-X900-E01"                # CSS: not used in geometry
+
+# --- Flight Control System ---
+FCS_Cost                = None                              # CSS: not used in geometry
+FCS_Mass                = None                              # CSS: not used in geometry
+
+# --- Fuselage (CSS Fuselage group has no geometry rows) ---
+Fuse_Cost               = None                              # CSS: not used in geometry
+Fuse_Mass               = None                              # CSS: not used in geometry
+
+# --- GPS ---
+GPS_Cost                = None                              # CSS: not used in geometry
+GPS_Mass                = None                              # CSS: not used in geometry
+GPS_intergrated_circuit = "MMS-GPS-M8N-G01"                 # CSS: not used in geometry (CSS name: 'GPS intergrated circuit' — typo + space)
+
+# --- HTP (non-geometry rows) ---
+HTP_Cost                = None                              # CSS: not used in geometry
+HTP_Mass                = None                              # CSS: not used in geometry
+
+# --- IMU ---
+IMU_Cost                = None                              # CSS: not used in geometry
+IMU_Mass                = None                              # CSS: not used in geometry
+IMU_intergrated_circuit = "MMS-IMU-6DOF-F02"                # CSS: not used in geometry (CSS name: 'IMU intergrated circuit' — typo + space)
+
+# --- Motor (non-geometry rows) ---
+Motor_Cost              = None                              # CSS: not used in geometry
+Motor_Mass              = None                              # CSS: not used in geometry
+Motor_Part_Number       = "MMS-MTR-4217-A01"                # CSS: not used in geometry
+Motor_RCM_Calculation   = "MIL-HDBK-217 FN2 Parts Count, Rotating Device, Motor"  # CSS: not used in geometry
+
+# --- Payload ---
+Pld_Mass                = None                              # CSS: not used in geometry
+
+# --- Payload Compartment ---
+PldC_Cost               = None                              # CSS: not used in geometry
+PldC_Mass               = None                              # CSS: not used in geometry
+
+# --- Propellor (CSS group; non-geometry rows) ---
+Prop_Cost               = None                              # CSS: not used in geometry
+Prop_Mass               = None                              # CSS: not used in geometry
+Prop_Part_Number        = "MMS-PRP-1755-C01"                # CSS: not used in geometry
+Prop_RCM_Calculation    = "MIL-HDBK-217 FN2 Parts Count, Mechanical, Mechanical Couplings"  # CSS: not used in geometry
+
+# --- Propulsion System ---
+PS_Cost                 = None                              # CSS: not used in geometry
+PS_Mass                 = None                              # CSS: not used in geometry
+PS_Efficiency           = 0.8                               # CSS: not used in geometry
+
+# --- Radio ---
+Radio_Cost              = None                              # CSS: not used in geometry
+Radio_Mass              = None                              # CSS: not used in geometry
+Radio_Part_Number       = None                              # CSS: not used in geometry
+Radio_RCM_Calculation   = None                              # CSS: not used in geometry
+
+# --- RX ---
+RX_Cost                 = None                              # CSS: not used in geometry
+RX_Mass                 = None                              # CSS: not used in geometry
+RX_Part_Number          = "MMS-RCV-24G-I01"                 # CSS: not used in geometry
+RX_RCM_Calculation      = None                              # CSS: not used in geometry
+
+# --- Structure ---
+Struct_CD0              = 0.03                              # CSS: not used in geometry (dimensionless)
+Struct_CL               = 0.9                               # CSS: not used in geometry (dimensionless)
+Struct_Cost             = None                              # CSS: not used in geometry
+Sruct_Mass              = None                              # CSS: not used in geometry (CSS typo: should be Struct_Mass)
+Struct_Part_Number      = "MMS-FRM-FW25-L01"                # CSS: not used in geometry
+
+# --- TX ---
+TX_Cost                 = None                              # CSS: not used in geometry
+TX_Mass                 = 2.0                               # CSS: not used in geometry
+TX_Part_Number          = "MMS-TLM-915-J02"                 # CSS: not used in geometry
+TX_RCM_Calculation      = None                              # CSS: not used in geometry
+
+# --- UAV ---
+UAV_Cruise_Range        = 30.0                              # CSS: not used in geometry (km)
+UAV_Mass                = None                              # CSS: not used in geometry
+UAV_Cruise_Speed        = 92.0                              # CSS: not used in geometry (km/h)
+
+# --- VTP (non-geometry rows) ---
+VTP_Cost                = None                              # CSS: not used in geometry
+VTP_Mass                = None                              # CSS: not used in geometry
+
+# --- Wing (non-geometry rows) ---
+Wing_Cost               = None                              # CSS: not used in geometry
+Wing_MAC                = 0.2                               # CSS: not used in geometry (mean aerodynamic chord, m)
+Wing_Mass               = None                              # CSS: not used in geometry
+
+# --- XPDR ---
+XPDR_Cost               = None                              # CSS: not used in geometry
+XPDR_Mass               = None                              # CSS: not used in geometry
+XPDR_Part_Number        = "MMS-ANT-DPL-K01"                 # CSS: not used in geometry
+XPDR_RCM_Calculation    = None                              # CSS: not used in geometry
+
+
+# =============================================================
+# Document setup
+# =============================================================
+DOC_NAME = "ZiplineDrone_v3"
+if DOC_NAME in App.listDocuments():
+    App.closeDocument(DOC_NAME)
+doc = App.newDocument(DOC_NAME)
+
+
+# =============================================================
+# Helpers
+# =============================================================
+def naca4_section_points(chord, thickness, camber=0.0, camber_pos=0.4, n=80):
+    upper, lower = [], []
+    for i in range(n + 1):
+        beta = math.pi * i / n
+        x = (1.0 - math.cos(beta)) / 2.0
+        yt = 5.0 * thickness * (
+            0.2969 * math.sqrt(x)
+            - 0.1260 * x
+            - 0.3516 * x ** 2
+            + 0.2843 * x ** 3
+            - 0.1036 * x ** 4
+        )
+        if camber > 0.0:
+            if x < camber_pos:
+                yc  = (camber / camber_pos ** 2) * (2 * camber_pos * x - x ** 2)
+                dyc = (2 * camber / camber_pos ** 2) * (camber_pos - x)
+            else:
+                yc  = (camber / (1 - camber_pos) ** 2) * (
+                    (1 - 2 * camber_pos) + 2 * camber_pos * x - x ** 2
+                )
+                dyc = (2 * camber / (1 - camber_pos) ** 2) * (camber_pos - x)
+            theta = math.atan(dyc)
+            xu, zu = x - yt * math.sin(theta), yc + yt * math.cos(theta)
+            xl, zl = x + yt * math.sin(theta), yc - yt * math.cos(theta)
+        else:
+            xu, zu = x, yt
+            xl, zl = x, -yt
+        upper.append(Vector(xu * chord, 0, zu * chord))
+        lower.append(Vector(xl * chord, 0, zl * chord))
+    pts = upper + list(reversed(lower[1:-1]))
+    pts.append(pts[0])
+    return pts
+
+
+def airfoil_wire(chord, thickness, camber=0.0, camber_pos=0.4):
+    return Part.makePolygon(
+        naca4_section_points(chord, thickness, camber, camber_pos)
+    )
+
+
+def superellipse_wire_yz(x, width, height, z_center, n=2.0, num_points=80):
+    a, b = width / 2.0, height / 2.0
+    pts = []
+    for i in range(num_points + 1):
+        t = 2.0 * math.pi * i / num_points
+        c = math.cos(t)
+        s = math.sin(t)
+        y = a * (1 if c >= 0 else -1) * abs(c) ** (2.0 / n)
+        z = z_center + b * (1 if s >= 0 else -1) * abs(s) ** (2.0 / n)
+        pts.append(Vector(x, y, z))
+    return Part.makePolygon(pts)
+
+
+def add_object(name, shape, color=None):
+    obj = doc.addObject("Part::Feature", name)
+    obj.Shape = shape
+    try:
+        if color is not None and obj.ViewObject is not None:
+            obj.ViewObject.ShapeColor = color
+    except Exception:
+        pass
+    return obj
+
+
+def make_strut(start, end, diameter):
+    """Cylinder from start to end with given diameter."""
+    direction = end - start
+    length = direction.Length
+    if length < 1e-9:
+        return None
+    return Part.makeCylinder(
+        diameter / 2.0, length, start, Vector(direction).normalize()
+    )
+
+
+# =============================================================
+# Fuselage  (flying-boat hull) + belly hatch + payload bay
+# =============================================================
+def build_fuselage_and_hatch():
+    z_mid = POD_HEIGHT * 0.5
+    sections = [
+        (0.0,                                0.014,            0.014,             z_mid * 1.05),
+        (POD_NOSE_LENGTH * 0.30,             POD_WIDTH * 0.55, POD_HEIGHT * 0.60, z_mid),
+        (POD_NOSE_LENGTH * 0.70,             POD_WIDTH * 0.88, POD_HEIGHT * 0.90, z_mid),
+        (POD_NOSE_LENGTH,                    POD_WIDTH,        POD_HEIGHT,        z_mid),
+        (POD_LENGTH - POD_TAIL_LENGTH,       POD_WIDTH,        POD_HEIGHT,        z_mid),
+        (POD_LENGTH - POD_TAIL_LENGTH * 0.5, POD_WIDTH * 0.75, POD_HEIGHT * 0.75, z_mid),
+        (POD_LENGTH - POD_TAIL_LENGTH * 0.15,POD_WIDTH * 0.42, POD_HEIGHT * 0.42, z_mid),
+        (POD_LENGTH,                         0.055,            0.055,             z_mid),
+    ]
+    wires = [
+        superellipse_wire_yz(x, w, h, zc, POD_SHAPE_N)
+        for (x, w, h, zc) in sections
+    ]
+    pod_solid = Part.makeLoft(wires, True, False)
+
+    # Hatch (same boolean technique as previous designs)
+    semi_y = POD_WIDTH / 2.0
+    semi_z = POD_HEIGHT / 2.0
+    hatch_hw = min(HATCH_HALFWIDTH, semi_y * 0.92)
+    z_at_edge = semi_z * (
+        max(0.0, 1.0 - (hatch_hw / semi_y) ** POD_SHAPE_N)
+    ) ** (1.0 / POD_SHAPE_N)
+    hatch_top_z = z_mid - z_at_edge
+
+    cut_box = Part.makeBox(
+        HATCH_LENGTH, 2.0 * hatch_hw, hatch_top_z + POD_HEIGHT * 2,
+        Vector(HATCH_X_START, -hatch_hw, -POD_HEIGHT * 2),
+    )
+
+    bay_hw = min(hatch_hw - 0.005, semi_y - 0.010)
+    bay_x = HATCH_X_START + 0.012
+    bay_length = max(0.020, HATCH_LENGTH - 0.024)
+    z_top_at_bay_edge = z_mid + semi_z * (
+        max(0.0, 1.0 - (bay_hw / semi_y) ** POD_SHAPE_N)
+    ) ** (1.0 / POD_SHAPE_N)
+    bay_top_z = min(
+        hatch_top_z + PAYLOAD_HEIGHT + PAYLOAD_BAY_EXTRA,
+        z_top_at_bay_edge - 0.008,
+    )
+    bay_box = Part.makeBox(
+        bay_length, 2.0 * bay_hw, bay_top_z - hatch_top_z,
+        Vector(bay_x, -bay_hw, hatch_top_z),
+    )
+
+    hatch_piece = pod_solid.common(cut_box)
+    pod_after_cut = pod_solid.cut(cut_box)
+    pod_with_bay = pod_after_cut.cut(bay_box)
+
+    add_object("Fuselage", pod_with_bay, (0.96, 0.96, 0.97))
+
+    hatch_obj = add_object("DropHatch", hatch_piece, (0.85, 0.13, 0.18))
+    hinge = Vector(HATCH_X_START, 0.0, hatch_top_z)
+    hatch_obj.Placement = Placement(
+        Vector(0, 0, 0),
+        Rotation(Vector(0, 1, 0), HATCH_OPEN_DEG),
+        hinge,
+    )
+    return hatch_top_z
+
+
+# =============================================================
+# Wing
+# =============================================================
+def build_wing():
+    half_span = Wing_Span / 2.0
+    rise  = half_span * math.tan(math.radians(Wing_Dihedral_Deg))
+    sweep = half_span * math.tan(math.radians(Wing_Sweep_Deg))
+
+    root = airfoil_wire(Wing_Root_Chord, Wing_Thickness_Pct,
+                        Wing_Camber_pct, Wing_Camber_Pos)
+    tip  = airfoil_wire(Wing_Tip_Chord,  Wing_Thickness_Pct,
+                        Wing_Camber_pct, Wing_Camber_Pos)
+    tip.Placement = Placement(Vector(sweep, half_span, rise), Rotation())
+
+    right = Part.makeLoft([root, tip], True, False)
+    left  = right.mirror(Vector(0, 0, 0), Vector(0, 1, 0))
+    wing  = right.fuse(left)
+
+    obj = add_object("Wing", wing, (0.85, 0.13, 0.18))
+    obj.Placement = Placement(
+        Vector(Wing_X_Pos, 0, POD_HEIGHT * Wing_Z_Frac),
+        Rotation(Vector(0, 1, 0), -Wing_Incidence_Deg),
+    )
+
+
+# =============================================================
+# Pylon-mounted pusher (motor + prop on twin struts above fuselage)
+# =============================================================
+def build_pusher_pylons_motor_prop():
+    pylon_top = Vector(PYLON_X, 0.0, POD_HEIGHT + PYLON_HEIGHT)
+
+    # Twin pylons converging from fuselage top to a single point at the motor
+    pylons = None
+    for side in (-1, 1):
+        bottom = Vector(PYLON_X, side * PYLON_SPACING_Y / 2.0, POD_HEIGHT * 0.92)
+        strut = make_strut(bottom, pylon_top, PYLON_DIAM)
+        pylons = strut if pylons is None else pylons.fuse(strut)
+    # Streamlined nacelle/fairing at the pylon apex to blend into the motor
+    nacelle = Part.makeSphere(Motot_Diameter / 2.0 * 0.85, pylon_top)
+    pylons = pylons.fuse(nacelle)
+    add_object("PusherPylons", pylons, (0.30, 0.30, 0.32))
+
+    # Motor sitting on top of the pylons, axis along +X (pusher)
+    motor_z = POD_HEIGHT + PYLON_HEIGHT
+    motor_x = PYLON_X
+    motor = Part.makeCylinder(
+        Motot_Diameter / 2.0, Motor_Length,
+        Vector(motor_x, 0, motor_z),
+        Vector(1, 0, 0),
+    )
+    add_object("Motor", motor, (0.10, 0.10, 0.10))
+
+    hub_x = motor_x + Motor_Length
+    hub = Part.makeCylinder(
+        Prop_Hub_Diam / 2.0, 0.008,
+        Vector(hub_x, 0, motor_z),
+        Vector(1, 0, 0),
+    )
+
+    def build_blade(angle_deg):
+        w_r, w_t = Prop_Blade_W_Root, Prop_W_Tip
+        r_in, r_out = Prop_Hub_Diam / 2.0, Prop_Diameter / 2.0
+        t = Prop_Thickness
+        bot = [
+            Vector(-w_r / 2.0, r_in,  -t / 2.0),
+            Vector( w_r / 2.0, r_in,  -t / 2.0),
+            Vector( w_t / 2.0, r_out, -t / 2.0),
+            Vector(-w_t / 2.0, r_out, -t / 2.0),
+        ]
+        top = [Vector(p.x, p.y, t / 2.0) for p in bot]
+        bot_wire = Part.makePolygon(bot + [bot[0]])
+        top_wire = Part.makePolygon(top + [top[0]])
+        blade = Part.makeLoft([bot_wire, top_wire], True, False)
+
+        pitch = Placement(Vector(0, 0, 0),
+                          Rotation(Vector(0, 1, 0), -Prop_Pitch_Deg))
+        rot   = Placement(Vector(0, 0, 0),
+                          Rotation(Vector(1, 0, 0), angle_deg))
+        pos   = Placement(Vector(hub_x + 0.005, 0, motor_z), Rotation())
+        blade.Placement = pos.multiply(rot).multiply(pitch).multiply(blade.Placement)
+        return blade
+
+    prop = hub
+    n_blades = int(Prop_Blades)   # CSS type is 'Real'; range() needs int
+    for i in range(n_blades):
+        prop = prop.fuse(build_blade(360.0 * i / n_blades))
+    add_object("Propeller", prop, (0.10, 0.10, 0.10))
+
+
+# =============================================================
+# Tail boom (single)
+# =============================================================
+def build_tail_boom():
+    boom_z = POD_HEIGHT * BOOM_Z_FRAC
+    boom_length = BOOM_X_END - BOOM_X_START
+    boom = Part.makeCylinder(
+        BOOM_DIAM / 2.0, boom_length,
+        Vector(BOOM_X_START, 0, boom_z),
+        Vector(1, 0, 0),
+    )
+    add_object("TailBoom", boom, (0.94, 0.94, 0.96))
+
+    # Small rear skid / sensor (8) at the end of the boom
+    skid_start = Vector(BOOM_X_END, 0, boom_z)
+    skid_end   = Vector(BOOM_X_END + SKID_LENGTH * 0.7, 0,
+                        boom_z - SKID_LENGTH * 0.55)
+    skid = make_strut(skid_start, skid_end, SKID_DIAM)
+    tip = Part.makeSphere(SKID_DIAM / 2.0, skid_end)
+    skid = skid.fuse(tip)
+    add_object("RearSkid", skid, (0.30, 0.30, 0.32))
+
+
+# =============================================================
+# T-tail (VTP on boom end + HTP on top)
+# =============================================================
+def build_t_tail():
+    boom_z = POD_HEIGHT * BOOM_Z_FRAC
+    vtp_root_z = boom_z + BOOM_DIAM / 2.0    # sits on top of boom
+
+    # VTP (built lying flat then rotated 90° so span goes up)
+    root = airfoil_wire(VTP_Root_Chord, VTP_Thick_Pct)
+    tip  = airfoil_wire(VTP_Tip_Chord,  VTP_Thick_Pct)
+    sweep = VTP_Height * math.tan(math.radians(VTP_Sweep_Deg))
+    tip.Placement = Placement(Vector(sweep, VTP_Height, 0), Rotation())
+    fin = Part.makeLoft([root, tip], True, False)
+
+    fin_x = BOOM_X_END - VTP_Root_Chord * 0.7
+    fin_obj = add_object("VerticalFin", fin, (0.95, 0.95, 0.97))
+    fin_obj.Placement = Placement(
+        Vector(fin_x, 0, vtp_root_z),
+        Rotation(Vector(1, 0, 0), 90.0),
+    )
+
+    # HTP perched on top of the VTP (true T-tail)
+    htp_z = vtp_root_z + VTP_Height
+    htp_x = fin_x + sweep + (VTP_Tip_Chord - HTP_Root_Chord) * 0.5
+
+    half_span = HTP_Span / 2.0
+    rise = half_span * math.tan(math.radians(HTP_Dihedral_Deg))
+    root_h = airfoil_wire(HTP_Root_Chord, HTP_Thick_Pct)
+    tip_h  = airfoil_wire(HTP_Tip_Chord,  HTP_Thick_Pct)
+    tip_h.Placement = Placement(
+        Vector((HTP_Root_Chord - HTP_Tip_Chord) / 2.0,
+               half_span, rise),
+        Rotation(),
+    )
+    right = Part.makeLoft([root_h, tip_h], True, False)
+    left  = right.mirror(Vector(0, 0, 0), Vector(0, 1, 0))
+    hstab = right.fuse(left)
+
+    h_obj = add_object("HorizontalStabilizer", hstab, (0.95, 0.95, 0.97))
+    h_obj.Placement = Placement(
+        Vector(htp_x, 0, htp_z),
+        Rotation(),
+    )
+
+
+# =============================================================
+# Payload visualization
+# =============================================================
+def build_payload(hatch_top_z):
+    payload_x = HATCH_X_START + (HATCH_LENGTH - PAYLOAD_LENGTH) / 2.0
+    box = Part.makeBox(
+        PAYLOAD_LENGTH, PAYLOAD_WIDTH, PAYLOAD_HEIGHT,
+        Vector(payload_x, -PAYLOAD_WIDTH / 2.0, hatch_top_z + 0.002),
+    )
+    add_object("Payload", box, (0.78, 0.58, 0.30))
+
+
+# =============================================================
+# Build everything
+# =============================================================
+print("Building flying-boat fuselage with belly drop hatch...")
+hatch_top_z = build_fuselage_and_hatch()
+print("Building red wings...")
+build_wing()
+print("Building pylon-mounted pusher (twin struts + motor + prop)...")
+build_pusher_pylons_motor_prop()
+print("Building tail boom and rear skid...")
+build_tail_boom()
+print("Building T-tail...")
+build_t_tail()
+if SHOW_PAYLOAD:
+    print("Adding payload package...")
+    build_payload(hatch_top_z)
+
+doc.recompute()
+
+try:
+    import FreeCADGui as Gui
+    Gui.activeDocument().activeView().viewAxonometric()
+    Gui.SendMsgToActiveView("ViewFit")
+except Exception:
+    pass
+
+print("Zipline P1 drone v3 (CSS-aligned) generated.")
+print(f"  Wingspan: {Wing_Span:.2f} m   Length: {BOOM_X_END:.2f} m (to fin)")
+print(f"  Pylon-mounted pusher, T-tail on single boom.")
+print(f"  Hatch open at {HATCH_OPEN_DEG:.0f} degrees.")
+print("  No landing gear: catapult launch + wire-hook recovery in real life.")
+print("  Edit CSS PARAMETERS at the top of this macro to customize.")
