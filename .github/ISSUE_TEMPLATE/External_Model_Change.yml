@@ -1,0 +1,60 @@
+name: External Model Change
+description: Raise a change to an external specialist model linked to the MMS
+title: "[EXTERNAL MODEL CHANGE]: "
+labels: ["external-model", "change-control"]
+body:
+  - type: dropdown
+    id: model
+    attributes:
+      label: External model affected
+      options:
+        - MATLAB performance model
+        - Relyence reliability model
+        - FreeCAD CAD model
+        - Excel BOM / parameter model
+        - Verification matrix
+        - Other
+ 
+  - type: input
+    id: model_file
+    attributes:
+      label: Model file or location
+      placeholder: e.g. models/matlab/performance_model.m
+ 
+  - type: textarea
+    id: change_description
+    attributes:
+      label: Description of model change
+ 
+  - type: textarea
+    id: reason
+    attributes:
+      label: Reason for change
+      placeholder: e.g. corrected assumption, updated formula, new input data
+ 
+  - type: checkboxes
+    id: downstream_effects
+    attributes:
+      label: Possible downstream effects
+      options:
+        - label: Parameter exchange affected
+        - label: Verification evidence affected
+        - label: Reliability output affected
+        - label: Performance output affected
+        - label: Compliance status affected
+        - label: Read-across decision required
+ 
+  - type: dropdown
+    id: rerun_required
+    attributes:
+      label: Specialist model re-run required?
+      options:
+        - Yes
+        - No
+        - Unknown - Chief Engineer review required
+ 
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Supporting evidence / linked outputs
+      placeholder: Add links to generated reports, plots, CSV outputs or verification evidence

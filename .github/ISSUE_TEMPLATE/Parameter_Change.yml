@@ -1,0 +1,56 @@
+name: Design Parameter Change
+description: Raise a proposed change to a CSS or MMS design parameter
+title: "[PARAMETER CHANGE]: "
+labels: ["parameter-change", "change-control"]
+body:
+  - type: input
+    id: parameter
+    attributes:
+      label: Parameter being changed
+      placeholder: e.g. Payload mass, wing span, battery capacity
+ 
+  - type: input
+    id: current_value
+    attributes:
+      label: Current value
+      placeholder: e.g. 5 kg
+ 
+  - type: input
+    id: proposed_value
+    attributes:
+      label: Proposed value
+      placeholder: e.g. 8 kg
+ 
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale for change
+      description: Why is this parameter change required?
+ 
+  - type: checkboxes
+    id: affected_models
+    attributes:
+      label: Potentially affected models
+      options:
+        - label: SysML model
+        - label: MATLAB performance model
+        - label: Relyence reliability model
+        - label: FreeCAD CAD model
+        - label: Excel BOM / parameter table
+        - label: Verification matrix
+ 
+  - type: textarea
+    id: expected_impact
+    attributes:
+      label: Expected impact
+      placeholder: Performance, reliability, mass, verification evidence, compliance, cost
+ 
+  - type: dropdown
+    id: review_decision
+    attributes:
+      label: Required Chief Engineer action
+      options:
+        - Impact assessment required
+        - Approve for implementation
+        - Reject change
+        - Request further analysis

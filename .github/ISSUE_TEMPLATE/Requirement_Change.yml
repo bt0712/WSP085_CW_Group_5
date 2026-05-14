@@ -1,0 +1,54 @@
+name: Requirement Change
+description: Raise a proposed change to a stakeholder or system requirement
+title: "[REQUIREMENT CHANGE]: "
+labels: ["requirement-change", "change-control"]
+body:
+  - type: input
+    id: requirement_id
+    attributes:
+      label: Requirement ID
+      placeholder: e.g. REQ-012
+ 
+  - type: textarea
+    id: current_requirement
+    attributes:
+      label: Current requirement statement
+ 
+  - type: textarea
+    id: proposed_requirement
+    attributes:
+      label: Proposed requirement statement
+ 
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Rationale for requirement change
+ 
+  - type: checkboxes
+    id: affected_artefacts
+    attributes:
+      label: Potentially affected artefacts
+      options:
+        - label: CSS architecture
+        - label: MMS architecture
+        - label: SysML requirements model
+        - label: MATLAB performance model
+        - label: Relyence reliability model
+        - label: Verification evidence
+        - label: Compliance matrix
+        - label: Risk register
+ 
+  - type: dropdown
+    id: verification_status
+    attributes:
+      label: Verification evidence impact
+      options:
+        - No impact expected
+        - Read-across may be possible
+        - Evidence likely invalidated
+        - Re-verification required
+ 
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes for Chief Engineer review
