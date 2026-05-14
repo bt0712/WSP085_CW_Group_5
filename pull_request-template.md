@@ -23,15 +23,6 @@ Delete as appropriate:
  
 ---
  
-# Linked Engineering Change Issue
- 
-Reference associated GitHub Issue.
- 
-Example:
-#12
- 
----
- 
 # Target Baseline Tag
  
 Example:
