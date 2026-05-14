@@ -23,19 +23,6 @@ Delete as appropriate:
  
 ---
  
-# Target Baseline Tag
- 
-Example:
-v1.0 → v1.1
- 
----
- 
-# SysML Change Report
- 
-Drag and drop the generated SysML change report, screenshots, PDFs, or supporting evidence into this section.
- 
----
- 
 # Affected Models
  
 Tick all impacted models and artefacts:
@@ -70,5 +57,7 @@ Unaffected models and artefacts are considered valid through controlled verifica
 ---
  
 # Engineering Notes
- 
+
+Ensure Evidence is attached
+
 Record assumptions, technical observations, limitations, verification concerns, or additional integration comments.
