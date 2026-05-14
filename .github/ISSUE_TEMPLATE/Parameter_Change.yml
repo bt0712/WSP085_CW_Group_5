@@ -1,10 +1,7 @@
 name: Design Parameter Change
 description: Raise a proposed change to a CSS or MMS design parameter
 title: "[PARAMETER CHANGE]: "
-labels:
-  - parameter-change
-  - change-control
-  
+labels: ["requirement-change", "change-control"]  
 body:
   - type: input
     id: parameter
