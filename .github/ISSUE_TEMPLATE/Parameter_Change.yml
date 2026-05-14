@@ -47,20 +47,26 @@ body:
         - label: Bill of Materials
  
   - type: textarea
-    id: expected_impact
+    id: engineer_notes
     attributes:
-      label: Expected impact
-      placeholder: Performance, reliability, mass, verification evidence, compliance, cost
+      label: Engineer notes
+      placeholder: Record expected impacts, assumptions, affected artefacts, verification concerns, or additional technical context.
  
-  - type: textarea
-    id: chief_engineer_decision
+  - type: checkboxes
+    id: chief_engineer_rerun_decision
     attributes:
-      label: Chief Engineer model re-run decision
-      description: To be completed during technical review.
-      placeholder: Chief Engineer to confirm authorised model re-runs, rejected re-runs, and rationale.
+      label: Chief Engineer authorised model re-runs
+      description: Select the models authorised for re-run following technical review.
+      options:
+        - label: Parametric Model Range approved for re-run
+        - label: Reliability Model approved for re-run
+        - label: CAD approved for re-run
+        - label: Bill of Materials approved for update
+        - label: Verification review required
+        - label: Additional impact assessment required
  
   - type: textarea
     id: chief_engineer_notes
     attributes:
       label: Chief Engineer notes
-      description: Record authorised re-runs, exclusions, and technical rationale.
+      description: Record authorised re-runs, exclusions, technical rationale, and review decisions.
