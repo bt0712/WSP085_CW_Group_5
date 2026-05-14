@@ -1,30 +1,83 @@
-# MMS Change Review
+# Engineering Change Pull Request
  
-## 1. Change Summary
-- Change type: Design parameter change / requirement change / model update
-- Affected CSS element:
-- Branch name:
-- Related commit:
+This Pull Request represents a controlled engineering baseline update within the MMS configuration management workflow.
  
-## 2. SysML Change Report
-- [ ] SysML report generated
-- Report location:
-- Key changed elements:
+---
  
-## 3. Affected External Models
-- [ ] MATLAB performance model
-- [ ] Relyence reliability model
-- [ ] Excel parameter exchange model
-- [ ] FreeCAD geometry model
+# Change Summary
  
-## 4. Verification Evidence Status
-- [ ] Evidence remains valid
-- [ ] Evidence requires read-across approval
-- [ ] Evidence invalidated and re-run required
+Provide a concise summary of the engineering change implemented.
  
-## 5. Chief Engineer Decision
-- [ ] Approve merge into baseline
-- [ ] Reject change
-- [ ] Request rework / re-verification
+Example:
+Payload mass increased from 5kg to 8kg requiring performance and reliability reassessment.
  
-## 6. Notes / Rationale
+---
+ 
+# Change Classification
+ 
+Delete as appropriate:
+ 
+- Parameter Change
+- Requirement Change
+- External Model Change
+ 
+---
+ 
+# Linked Engineering Change Issue
+ 
+Reference associated GitHub Issue.
+ 
+Example:
+#12
+ 
+---
+ 
+# Target Baseline Tag
+ 
+Example:
+v1.0 → v1.1
+ 
+---
+ 
+# SysML Change Report
+ 
+Drag and drop the generated SysML change report, screenshots, PDFs, or supporting evidence into this section.
+ 
+---
+ 
+# Affected Models
+ 
+Tick all impacted models and artefacts:
+ 
+- [ ] SysML Architecture Model
+- [ ] MATLAB Performance Model
+- [ ] Relyence Reliability Model
+- [ ] FreeCAD CAD Model
+- [ ] BOM / Excel Models
+- [ ] Verification Evidence
+- [ ] Requirements Baseline
+ 
+---
+ 
+# Model Re-Execution Status
+ 
+Delete as appropriate.
+ 
+| Model | Status |
+|---|---|
+| MATLAB | YES / NO / N/A |
+| Relyence | YES / NO / N/A |
+| CAD | YES / NO / N/A |
+| Verification Review | YES / NO / N/A |
+ 
+---
+ 
+# Verification Evidence Statement
+ 
+Unaffected models and artefacts are considered valid through controlled verification read-across unless explicitly identified for reassessment within this Pull Request.
+ 
+---
+ 
+# Engineering Notes
+ 
+Record assumptions, technical observations, limitations, verification concerns, or additional integration comments.
